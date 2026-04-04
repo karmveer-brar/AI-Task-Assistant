@@ -1,22 +1,22 @@
 import streamlit as st
-import openai
-import os
 import re
+import os
+from openai import OpenAI
 from main import SimpleAI  # your custom class
 
 # Initialize your SimpleAI instance
 ai = SimpleAI()
 
-# Load OpenAI API key from environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Function to call OpenAI
 def ask_openai(question):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",   # use "gpt-4" if enabled
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",   # or "gpt-4" if enabled
         messages=[{"role": "user", "content": question}]
     )
-    return response.choices[0].message["content"]
+    return response.choices[0].message.content
 
 # Streamlit UI
 st.title("AI Task Assistant")
