@@ -1,23 +1,52 @@
 import streamlit as st
-from main import SimpleAI   # Import your AI class
+import openai
+import os
+import re
+from main import SimpleAI  # your custom class
 
-# Create AI instance
+# Initialize your SimpleAI instance
 ai = SimpleAI()
 
+# Load OpenAI API key from environment variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Function to call OpenAI
+def ask_openai(question):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",   # use "gpt-4" if enabled
+        messages=[{"role": "user", "content": question}]
+    )
+    return response.choices[0].message["content"]
+
+# Streamlit UI
 st.title("AI Task Assistant")
+st.write("Welcome! This is a simple AI agent you can interact with.")
 
 # Text input field
 user_input = st.text_input("Ask me something:")
 
 # Respond when user types
 if user_input:
-    if "hello" in user_input.lower():
+    text = user_input.lower()
+
+    # Rule-based responses
+    if "hello" in text or "hi" in text:
         st.write(ai.greet())
-    elif "math" in user_input.lower():
-        st.write(ai.do_math(5, 7))  # later you can parse numbers
-    elif "time" in user_input.lower():
+
+    elif "add" in text or "sum" in text or "calculate" in text:
+        numbers = re.findall(r'\d+', user_input)
+        if len(numbers) >= 2:
+            result = int(numbers[0]) + int(numbers[1])
+            st.write(f"The sum is {result}")
+        else:
+            st.write(ai.do_math(5, 7))  # fallback
+
+    elif "time" in text or "clock" in text:
         st.write(ai.tell_time())
-    elif "suggest" in user_input.lower():
+
+    elif "suggest" in text or "decide" in text or "choose" in text:
         st.write(ai.decide_action())
+
     else:
-        st.write("I don't understand yet, but I'm learning!")
+        # For everything else, ask OpenAI
+        st.write(ask_openai(user_input))
