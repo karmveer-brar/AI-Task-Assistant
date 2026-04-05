@@ -1,31 +1,33 @@
 import streamlit as st
 import re
-import os
-from openai import OpenAI
+import requests
 from main import SimpleAI  # your custom class
 
 # Initialize your SimpleAI instance
 ai = SimpleAI()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Hugging Face API setup
+HF_API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
+HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
 
-# Function to call OpenAI
-def ask_openai(question):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",   # or "gpt-4" if enabled
-        messages=[{"role": "user", "content": question}]
-    )
-    return response.choices[0].message.content
+headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+
+# Function to call Hugging Face model
+def ask_huggingface(question):
+    payload = {"inputs": question}
+    response = requests.post(HF_API_URL, headers=headers, json=payload)
+    data = response.json()
+    if isinstance(data, list) and "generated_text" in data[0]:
+        return data[0]["generated_text"]
+    else:
+        return "Sorry, I couldn't generate a response right now."
 
 # Streamlit UI
-st.title("AI Task Assistant")
+st.title("Free AI Task Assistant")
 st.write("Welcome! This is a simple AI agent you can interact with.")
 
-# Text input field
 user_input = st.text_input("Ask me something:")
 
-# Respond when user types
 if user_input:
     text = user_input.lower()
 
@@ -48,5 +50,5 @@ if user_input:
         st.write(ai.decide_action())
 
     else:
-        # For everything else, ask OpenAI
-        st.write(ask_openai(user_input))
+        # For everything else, ask Hugging Face
+        st.write(ask_huggingface(user_input))
