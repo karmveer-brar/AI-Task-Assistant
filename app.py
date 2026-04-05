@@ -6,8 +6,8 @@ from main import SimpleAI  # your custom class
 # Initialize your SimpleAI instance
 ai = SimpleAI()
 
-# Hugging Face API setup
-HF_API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
+# Hugging Face API setup (Meta LLaMA-3 Instruct model)
+HF_API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
 HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
 
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
@@ -17,10 +17,14 @@ def ask_huggingface(question):
     payload = {"inputs": question}
     response = requests.post(HF_API_URL, headers=headers, json=payload)
     data = response.json()
-    if isinstance(data, list) and "generated_text" in data[0]:
+    if isinstance(data, dict) and "generated_text" in data:
+        return data["generated_text"]
+    elif isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
         return data[0]["generated_text"]
+    elif "error" in data:
+        return f"Model error: {data['error']}"
     else:
-        return "Sorry, I couldn't generate a response right now."
+        return "The model did not return a valid response."
 
 # Streamlit UI
 st.title("Free AI Task Assistant")
