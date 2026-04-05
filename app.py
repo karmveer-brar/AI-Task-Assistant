@@ -12,19 +12,25 @@ HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # safely stored in Streamlit Cloud se
 
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# Function to call Hugging Face model
+# Function to call Hugging Face model safely
 def ask_huggingface(question):
     payload = {"inputs": question}
-    response = requests.post(HF_API_URL, headers=headers, json=payload)
-    data = response.json()
-    if isinstance(data, dict) and "generated_text" in data:
-        return data["generated_text"]
-    elif isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-        return data[0]["generated_text"]
-    elif "error" in data:
-        return f"Model error: {data['error']}"
-    else:
-        return "The model did not return a valid response."
+    try:
+        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()  # raise error if HTTP status != 200
+        data = response.json()
+        if isinstance(data, dict) and "generated_text" in data:
+            return data["generated_text"]
+        elif isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
+            return data[0]["generated_text"]
+        elif "error" in data:
+            return f"Model error: {data['error']}"
+        else:
+            return "The model did not return a valid response."
+    except requests.exceptions.JSONDecodeError:
+        return "Error: Hugging Face returned invalid JSON."
+    except requests.exceptions.RequestException as e:
+        return f"Connection error: {str(e)}"
 
 # Streamlit UI
 st.title("Free AI Task Assistant")
