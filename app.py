@@ -7,8 +7,8 @@ from main import SimpleAI  # your custom class
 ai = SimpleAI()
 
 # Hugging Face API setup (Meta LLaMA-3 Instruct model via router)
-HF_API_URL = "https://router.huggingface.co/mistralai/Mistral-7B-Instruct-v0.2"
-HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
+HF_API_URL = "https://router.huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct"
+HF_API_TOKEN = st.secrets["hf_HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
 
 headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
