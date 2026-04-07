@@ -1,68 +1,44 @@
 import streamlit as st
-import re
-import requests
-from main import SimpleAI  # your custom class
+from transformers import pipeline
 
-# Initialize your SimpleAI instance
-ai = SimpleAI()
+# Title
+st.title("Realistic AI Chatbot")
 
-# Hugging Face API setup (Meta LLaMA-3 Instruct model via router)
-HF_API_URL = "https://router.huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct"
-<<<<<<< HEAD
-HF_API_TOKEN = st.secrets["hf_HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
-=======
-HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # safely stored in Streamlit Cloud secrets
->>>>>>> 652a6b0 (Remove hardcoded Hugging Face token)
+# Load Hugging Face model (with token from secrets)
+@st.cache_resource
+def load_model():
+    HF_API_TOKEN = st.secrets["HF_API_TOKEN"]  # must match Secrets Manager key
+    return pipeline(
+        "text-generation",
+        model="facebook/blenderbot-400M-distill",
+        use_auth_token=HF_API_TOKEN
+    )
 
-headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+generator = load_model()
 
-# Function to call Hugging Face model safely
-def ask_huggingface(question):
-    payload = {"inputs": question}
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()  # raise error if HTTP status != 200
-        data = response.json()
-        if isinstance(data, dict) and "generated_text" in data:
-            return data["generated_text"]
-        elif isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            return data[0]["generated_text"]
-        elif "error" in data:
-            return f"Model error: {data['error']}"
-        else:
-            return "The model did not return a valid response."
-    except requests.exceptions.JSONDecodeError:
-        return "Error: Hugging Face returned invalid JSON."
-    except requests.exceptions.RequestException as e:
-        return f"Connection error: {str(e)}"
+# Chat history
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-# Streamlit UI
-st.title("Free AI Task Assistant")
-st.write("Welcome! This is a simple AI agent you can interact with.")
+# Display chat history
+for msg in st.session_state["messages"]:
+    if msg["role"] == "user":
+        st.markdown(f"**You:** {msg['content']}")
+    else:
+        st.markdown(f"**Bot:** {msg['content']}")
 
-user_input = st.text_input("Ask me something:")
+# User input
+user_input = st.text_input("Type your message:", key="input")
 
 if user_input:
-    text = user_input.lower()
+    # Add user message
+    st.session_state["messages"].append({"role": "user", "content": user_input})
 
-    # Rule-based responses
-    if "hello" in text or "hi" in text:
-        st.write(ai.greet())
+    # Generate bot response
+    response = generator(user_input, max_length=200, do_sample=True)[0]["generated_text"]
 
-    elif "add" in text or "sum" in text or "calculate" in text:
-        numbers = re.findall(r'\d+', user_input)
-        if len(numbers) >= 2:
-            result = int(numbers[0]) + int(numbers[1])
-            st.write(f"The sum is {result}")
-        else:
-            st.write(ai.do_math(5, 7))  # fallback
+    # Add bot message
+    st.session_state["messages"].append({"role": "bot", "content": response})
 
-    elif "time" in text or "clock" in text:
-        st.write(ai.tell_time())
-
-    elif "suggest" in text or "decide" in text or "choose" in text:
-        st.write(ai.decide_action())
-
-    else:
-        # For everything else, ask Hugging Face
-        st.write(ask_huggingface(user_input))
+    # Rerun to show new messages
+    st.experimental_rerun()
